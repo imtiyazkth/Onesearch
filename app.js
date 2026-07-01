@@ -1,32 +1,14 @@
 /**
- * OneSearch v3 — app.js
- * Production-ready. No placeholders. No demo code.
- *
- * What's new / fixed in v3:
- *   ✦ Google Photos: correct scope + incremental auth + retry
- *   ✦ Settings page: appearance, search, performance, privacy, data, about
- *   ✦ Search history: recent, pinned, most used, clear
- *   ✦ Smart suggestions: live dropdown with categories + typo correction banner
- *   ✦ Empty search state with examples and prefix commands
- *   ✦ Dashboard: grouped service accordion (Drive ▼ acc1, acc2, acc3)
- *   ✦ Background index status bar
- *   ✦ Drive results: Download, Copy Link, Open in Drive
- *   ✦ Gmail: full inline preview + Android deep link
- *   ✦ Photos: album, AI label, OCR metadata fields
- *   ✦ Settings: Clear Index, Reset Everything, per-setting toggles
- *   ✦ SettingsManager: persists all prefs to localStorage
- *   ✦ SearchHistoryManager: IndexedDB-backed history
- *   ✦ AccountManager: incremental scope authorization
- *   ✦ Proper error handling: never crashes, always recovers
+ 
  */
 
 'use strict';
 
 /* ═══════════════════════════════════════════════════════════════
-   CONFIGURATION
+   CONFIGURATION 
    ═══════════════════════════════════════════════════════════════ */
 const CONFIG = Object.freeze({
-  GOOGLE_CLIENT_ID: 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com',
+  GOOGLE_CLIENT_ID: '657934273937-oqj145pbgfuf67ea5hoi9rpj3ch3cpk1.apps.googleusercontent.com',
 
   // Scopes required per service
   SCOPES_BASE: ['openid', 'email', 'profile'].join(' '),
