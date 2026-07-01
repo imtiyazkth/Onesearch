@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <title>OneSearch — Search Everything, Everywhere</title>
+  <meta name="description" content="Privacy-first personal search engine. Search Drive, Gmail, Photos, Sheets and local files from one place." />
+  <meta name="robots" content="index, follow" />
+  <meta name="theme-color" content="#0d0d16" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="OneSearch" />
+  <meta property="og:description" content="One search bar. Every account. Every file. All private." />
+  <link rel="canonical" href="/" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="app-body" data-theme="dark">
+
+<!-- ═══════════════════════════════════════════════════════════
+     LOADING SCREEN
+══════════════════════════════════════════════════════════════ -->
+<div id="loading-screen" class="loading-screen" role="status" aria-live="polite">
+  <div class="loading-screen__inner">
+    <div class="loading-screen__logo" aria-hidden="true">
+      <span class="logo-mark">◎</span>
+      <span class="logo-text">OneSearch</span>
+    </div>
+    <div class="loading-screen__bar" aria-hidden="true">
+      <div class="loading-screen__bar-fill" id="loading-bar-fill"></div>
+    </div>
+    <p class="loading-screen__status" id="loading-status-text">Initialising…</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     TOAST CONTAINER
+══════════════════════════════════════════════════════════════ -->
+<div id="toast-container" class="toast-container" role="region" aria-label="Notifications" aria-live="polite" aria-atomic="false"></div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MODAL
+══════════════════════════════════════════════════════════════ -->
+<div id="modal-container" class="modal-container" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-body" hidden>
+  <div class="modal-overlay" id="modal-overlay" tabindex="-1"></div>
+  <div class="modal" id="modal">
+    <header class="modal__header">
+      <h2 class="modal__title" id="modal-title">Modal</h2>
+      <button class="modal__close btn-icon" id="modal-close-btn" aria-label="Close" type="button">
+        <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </header>
+    <div class="modal__body" id="modal-body"></div>
+    <footer class="modal__footer" id="modal-footer">
+      <button class="btn btn--secondary" id="modal-cancel-btn" type="button">Cancel</button>
+      <button class="btn btn--primary"   id="modal-confirm-btn" type="button">Confirm</button>
+    </footer>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     APP SHELL
+══════════════════════════════════════════════════════════════ -->
+<div class="app-shell" id="app-shell">
+
+  <!-- ─── HEADER ─────────────────────────────────────────────── -->
+  <header class="header" id="main-header" role="banner">
+    <div class="header__inner">
+
+      <!-- Logo -->
+      <a href="/" class="header__logo" id="logo" aria-label="OneSearch home">
+        <span class="header__logo-mark" aria-hidden="true">◎</span>
+        <span class="header__logo-text">OneSearch</span>
+      </a>
+
+      <!-- Search -->
+      <div class="header__search" role="search">
+        <label for="global-search-input" class="sr-only">Search everything</label>
+        <div class="search-bar" id="search-bar">
+          <span class="search-bar__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="17" height="17"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </span>
+          <input
+            type="search" id="global-search-input" class="search-bar__input"
+            name="q" placeholder="Search files, emails, photos, sheets…"
+            autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+            aria-label="Search everything" aria-autocomplete="list"
+            aria-controls="search-suggestions" aria-expanded="false"
+            role="combobox" maxlength="512"
+          />
+          <button class="search-bar__clear btn-icon" id="search-clear-btn" type="button" aria-label="Clear search" hidden>
+            <svg aria-hidden="true" viewBox="0 0 24 24" width="15" height="15"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+          <!-- Suggestions dropdown -->
+          <div class="search-suggestions-panel" id="search-suggestions-panel" hidden>
+            <ul class="search-suggestions" id="search-suggestions" role="listbox" aria-label="Search suggestions"></ul>
+            <div class="search-suggestions__history" id="search-history-dropdown" hidden>
+              <p class="search-suggestions__section-label">Recent searches</p>
+              <ul id="search-history-list" class="search-history-list"></ul>
+              <button class="search-suggestions__clear-history" id="clear-history-btn" type="button">Clear history</button>
+            </div>
+          </div>
+        </div>
+        <button class="btn btn--primary search-submit-btn" id="search-submit-btn" type="button">Search</button>
+      </div>
+
+      <!-- Actions -->
+      <div class="header__actions" id="header-actions">
+        <button class="btn-icon header__theme-toggle" id="theme-toggle-btn" type="button" aria-label="Toggle theme" aria-pressed="true">
+          <svg class="icon-moon" aria-hidden="true" viewBox="0 0 24 24" width="17" height="17"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+          <svg class="icon-sun"  aria-hidden="true" viewBox="0 0 24 24" width="17" height="17"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        </button>
+
+        <!-- User/Account menu -->
+        <div class="header__user" id="user-profile">
+          <button class="user-avatar-stack" id="user-avatar-btn" type="button"
+            aria-label="Account menu" aria-haspopup="true" aria-expanded="false" aria-controls="user-menu">
+            <div class="avatar-stack" id="avatar-stack">
+              <div class="avatar-chip avatar-chip--empty" aria-hidden="true">
+                <span class="avatar-chip__initials">?</span>
+              </div>
+            </div>
+            <span class="avatar-stack__count" id="avatar-stack-count" hidden></span>
+          </button>
+
+          <nav class="user-menu" id="user-menu" role="menu" aria-label="Account menu" hidden>
+            <div class="user-menu__accounts" id="user-menu-accounts">
+              <p class="user-menu__no-accounts">No accounts connected</p>
+            </div>
+            <hr class="user-menu__divider" />
+            <button class="user-menu__item user-menu__item--add" role="menuitem" id="menu-add-account-btn" type="button">
+              <svg aria-hidden="true" viewBox="0 0 24 24" width="15" height="15"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add another account
+            </button>
+            <hr class="user-menu__divider" />
+            <ul class="user-menu__list">
+              <li role="none"><button class="user-menu__item" role="menuitem" id="menu-accounts-btn" type="button">
+                <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                Connected Sources
+              </button></li>
+              <li role="none"><button class="user-menu__item" role="menuitem" id="menu-settings-btn" type="button">
+                <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+                Settings
+              </button></li>
+              <li role="none"><button class="user-menu__item" role="menuitem" id="menu-privacy-btn" type="button">
+                <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                Privacy
+              </button></li>
+              <li role="none"><button class="user-menu__item" role="menuitem" id="menu-help-btn" type="button">
+                <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                Help
+              </button></li>
+              <li role="none"><button class="user-menu__item user-menu__item--danger" role="menuitem" id="menu-disconnect-all-btn" type="button">
+                <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14"><polyline points="9 10 4 15 9 20"/><path d="M20 4v7a4 4 0 01-4 4H4"/></svg>
+                Disconnect All
+              </button></li>
+            </ul>
+          </nav>
+        </div>
+
+        <button class="btn-icon header__sidebar-toggle" id="sidebar-toggle-btn" type="button" aria-label="Toggle sidebar" aria-controls="sidebar" aria-expanded="false">
+          <svg aria-hidden="true" viewBox="0 0 24 24" width="19" height="19"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ─── LAYOUT ─────────────────────────────────────────────── -->
+  <div class="app-layout" id="app-layout">
+
+    <!-- ── SIDEBAR ───────────────────────────────────────────── -->
+    <aside class="sidebar" id="sidebar" role="complementary" aria-label="Navigation">
+      <nav class="sidebar__nav" id="sidebar-nav" aria-label="Primary navigation">
+        <ul class="sidebar__nav-list" role="list">
+          <li><a href="#" class="sidebar__nav-link sidebar__nav-link--active" id="nav-dashboard" aria-current="page" data-view="dashboard">
+            <svg aria-hidden="true" viewBox="0 0 24 24" width="17" height="17"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            <span>Dashboard</span>
+          </a></li>
+          <li><a href="#" class="sidebar__nav-link" id="nav-results" data-view="results">
+            <svg aria-hidden="true" viewBox="0 0 24 24" width="17" height="17"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <span>Search Results</span>
+            <span class="badge badge--count" id="nav-results-count" hidden>0</span>
+          </a></li>
+          <li><a href="#" class="sidebar__nav-link" id="nav-accounts" data-view="accounts">
+            <svg aria-hidden="true" viewBox="0 0 24 24" width="17" height="17"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+            <span>Connected Sources</span>
+            <span class="badge badge--count" id="nav-accounts-count" hidden>0</span>
+          </a></li>
+          <li><a href="#" class="sidebar__nav-link" id="nav-recent" data-view="recent">
+            <svg aria-hidden="true" viewBox="0 0 24 24" width="17" height="17"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <span>Recent</span>
+          </a></li>
+          <li><a href="#" class="sidebar__nav-link" id="nav-starred" data-view="starred">
+            <svg aria-hidden="true" viewBox="0 0 24 24" width="17" height="17"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <span>Starred</span>
+          </a></li>
+          <li><a href="#" class="sidebar__nav-link" id="nav-settings" data-view="settings">
+            <svg aria-hidden="true" viewBox="0 0 24 24" width="17" height="17"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+            <span>Settings</span>
+          </a></li>
+        </ul>
+
+        <!-- Dynamic sources -->
+        <div class="sidebar__section" id="sidebar-sources-section">
+          <h3 class="sidebar__section-label">Sources</h3>
+          <ul class="sidebar__nav-list" id="sidebar-sources-list" role="list"></ul>
+        </div>
+
+        <!-- Index meter -->
+        <div class="sidebar__storage" id="sidebar-storage" role="region" aria-label="Index size">
+          <h3 class="sidebar__section-label">Index</h3>
+          <div class="storage-meter">
+            <div class="storage-meter__bar" role="progressbar" id="storage-usage-bar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+              <div class="storage-meter__fill" id="storage-usage-fill"></div>
+            </div>
+            <p class="storage-meter__label" id="storage-usage-label">Calculating…</p>
+          </div>
+        </div>
+      </nav>
+      <div class="sidebar__overlay" id="sidebar-overlay" aria-hidden="true" tabindex="-1"></div>
+    </aside>
+
+    <!-- ── MAIN ───────────────────────────────────────────────── -->
+    <main class="main-content" id="main-content" role="main" tabindex="-1">
+
+      <!-- ════════════════════════════════════════════════════════
+           DASHBOARD VIEW
+      ════════════════════════════════════════════════════════ -->
+      <section class="view" id="view-dashboard" data-view="dashboard">
+        <header class="view-header">
+          <div class="view-header__text">
+            <h1 class="view-header__title">Dashboard</h1>
+            <p class="view-header__subtitle" id="dashboard-greeting">Connect your accounts to get started.</p>
+          </div>
+          <div class="view-header__actions">
+            <button class="btn btn--secondary" id="reindex-all-btn" type="button">
+              <svg aria-hidden="true" viewBox="0 0 24 24" width="15" height="15"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+              Re-index All
+            </button>
+            <button class="btn btn--primary" id="sync-all-btn" type="button">
+              <svg aria-hidden="true" viewBox="0 0 24 24" width="15" height="15"><polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15"/></svg>
+              Sync All
+            </button>
+          </div>
+        </header>
+
+        <!-- Stats row -->
+        <div class="stats-row" id="dashboard-stats" role="region" aria-label="Statistics">
+          <div class="stat-card"><span class="stat-card__value" id="stat-files-value">—</span><span class="stat-card__label">Files</span></div>
+          <div class="stat-card"><span class="stat-card__value" id="stat-emails-value">—</span><span class="stat-card__label">Emails</span></div>
+          <div class="stat-card"><span class="stat-card__value" id="stat-photos-value">—</span><span class="stat-card__label">Photos</span></div>
+          <div class="stat-card"><span class="stat-card__value" id="stat-sheets-value">—</span><span class="stat-card__label">Sheets</span></div>
+          <div class="stat-card"><span class="stat-card__value" id="stat-accounts-value">—</span><span class="stat-card__label">Accounts</span></div>
+          <div class="stat-card"><span class="stat-card__value" id="stat-sync-value">—</span><span class="stat-card__label">Last synced</span></div>
+        </div>
+
+        <!-- Background index status bar -->
+        <div class="index-status-bar" id="index-status-bar" hidden>
+          <div class="index-status-bar__spinner" aria-hidden="true"><div class="spinner__ring spinner__ring--sm"></div></div>
+          <span class="index-status-bar__text" id="index-status-text">Indexing…</span>
+          <div class="index-status-bar__progress">
+            <div class="progress-bar"><div class="progress-bar__fill" id="index-status-fill"></div></div>
+          </div>
+        </div>
+
+        <!-- Grouped sources -->
+        <section class="connected-sources" id="connected-sources" aria-label="Connected sources">
+          <div class="connected-sources__header">
+            <h2 class="section-title">Connected Sources</h2>
+            <button class="btn btn--ghost btn--small" id="add-account-dashboard-btn" type="button">
+              <svg aria-hidden="true" viewBox="0 0 24 24" width="13" height="13"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add Account
+            </button>
+          </div>
+          <!-- Grouped accordion: service → accounts -->
+          <div class="service-groups" id="service-groups">
+            <!-- Dynamically populated -->
+          </div>
+          <!-- Empty state -->
+          <div class="sources-empty" id="sources-empty">
+            <div class="sources-empty__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="46" height="46"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </div>
+            <h3>No accounts connected</h3>
+            <p>Add a Google account to start searching.</p>
+            <button class="btn btn--primary" id="sources-empty-add-btn" type="button">
+              <svg aria-hidden="true" viewBox="0 0 24 24" width="15" height="15"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add Google Account
+            </button>
+          </div>
+        </section>
+
+        <!-- Local Files -->
+        <section class="local-section" id="local-section" aria-label="Local files">
+          <h2 class="section-title">Local Files</h2>
+          <div class="local-card" id="local-card">
+            <div class="local-card__header">
+              <div class="source-card__icon source-card__icon--local" aria-hidden="true"></div>
+              <div class="local-card__meta">
+                <h3>Local Files</h3>
+                <span class="source-card__status" id="local-status">No folder selected</span>
+              </div>
+              <span class="badge badge--success" id="local-badge" hidden>Indexed</span>
+            </div>
+            <div class="local-card__body">
+              <p class="source-card__description">Index folders on this device. Files never leave your browser.</p>
+              <div id="local-stats" hidden>
+                <span class="source-card__stat" id="local-file-count"></span>
+                <span class="source-card__stat" id="local-folder-name"></span>
+                <span class="source-card__stat" id="local-last-sync"></span>
+              </div>
+              <div id="local-progress" hidden>
+                <div class="progress-bar"><div class="progress-bar__fill" id="local-progress-fill"></div></div>
+                <span class="progress-bar__label" id="local-progress-label">Indexing…</span>
+              </div>
+            </div>
+            <div class="local-card__footer">
+              <button class="btn btn--primary" id="local-add-folder-btn" type="button">
+                <svg aria-hidden="true" viewBox="0 0 24 24" width="13" height="13"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+                Select Folder
+              </button>
+              <button class="btn btn--ghost" id="local-rescan-btn" type="button" hidden>↻ Re-scan</button>
+              <button class="btn btn--ghost btn--danger" id="local-remove-btn" type="button" hidden>Remove</button>
+              <input type="file" id="local-folder-input" class="sr-only" webkitdirectory multiple aria-hidden="true" tabindex="-1" />
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <!-- ════════════════════════════════════════════════════════
+           CONNECTED SOURCES VIEW
+      ════════════════════════════════════════════════════════ -->
+      <section class="view" id="view-accounts" data-view="accounts" hidden>
+        <header class="view-header">
+          <div class="view-header__text">
+            <h1 class="view-header__title">Connected Sources</h1>
+            <p class="view-header__subtitle">Manage your Google accounts and services.</p>
+          </div>
+          <div class="view-header__actions">
+            <button class="btn btn--primary" id="add-account-btn" type="button">
+              <svg aria-hidden="true" viewBox="0 0 24 24" width="15" height="15"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add Google Account
+            </button>
+          </div>
+        </header>
+        <div class="accounts-grid" id="accounts-grid" role="list"></div>
+        <div class="state-empty" id="accounts-empty" hidden>
+          <div class="state-empty__icon"><svg viewBox="0 0 24 24" width="46" height="46"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
+          <h2 class="state-empty__title">No accounts connected</h2>
+          <p class="state-empty__body">Add a Google account to begin.</p>
+          <button class="btn btn--primary" id="accounts-empty-add-btn" type="button">Add Google Account</button>
+        </div>
+      </section>
+
+      <!-- ════════════════════════════════════════════════════════
+           SEARCH RESULTS VIEW
+      ════════════════════════════════════════════════════════ -->
+      <section class="view" id="view-results" data-view="results" hidden>
+        <header class="view-header view-header--results">
+          <div class="view-header__text">
+            <h1 class="view-header__title">
+              Results for <span class="view-header__query" id="results-query-label"></span>
+            </h1>
+            <p class="view-header__subtitle" id="results-count-label" aria-live="polite" aria-atomic="true">Searching…</p>
+          </div>
+        </header>
+
+        <!-- Typo correction banner -->
+        <div class="correction-banner" id="correction-banner" hidden>
+          <span class="correction-banner__text" id="correction-banner-text"></span>
+          <button class="btn btn--ghost btn--small" id="correction-accept-btn" type="button">Search instead</button>
+          <button class="btn-icon correction-banner__close" id="correction-dismiss-btn" type="button" aria-label="Dismiss">
+            <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+
+        <!-- Filters -->
+        <div class="search-filters" id="search-filters" role="group" aria-label="Search filters">
+          <div class="search-filters__left">
+            <div class="filter-group">
+              <label for="filter-type"    class="filter-label">Type</label>
+              <select class="filter-select" id="filter-type">
+                <option value="all">All types</option>
+                <option value="document">Documents</option>
+                <option value="image">Images</option>
+                <option value="email">Emails</option>
+                <option value="spreadsheet">Spreadsheets</option>
+                <option value="pdf">PDFs</option>
+                <option value="video">Videos</option>
+                <option value="audio">Audio</option>
+                <option value="code">Code</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label for="filter-source"  class="filter-label">Service</label>
+              <select class="filter-select" id="filter-source">
+                <option value="all">All services</option>
+                <option value="drive">Google Drive</option>
+                <option value="photos">Google Photos</option>
+                <option value="gmail">Gmail</option>
+                <option value="sheets">Google Sheets</option>
+                <option value="local">Local Files</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label for="filter-account" class="filter-label">Account</label>
+              <select class="filter-select" id="filter-account">
+                <option value="all">All accounts</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label for="filter-date"    class="filter-label">Date</label>
+              <select class="filter-select" id="filter-date">
+                <option value="any">Any time</option>
+                <option value="today">Today</option>
+                <option value="week">This week</option>
+                <option value="month">This month</option>
+                <option value="year">This year</option>
+                <option value="custom">Custom…</option>
+              </select>
+            </div>
+            <div class="filter-group filter-group--date-range" id="filter-date-range" hidden>
+              <label for="filter-date-from" class="filter-label">From</label>
+              <input type="date" class="filter-input" id="filter-date-from" />
+              <label for="filter-date-to"   class="filter-label">To</label>
+              <input type="date" class="filter-input" id="filter-date-to" />
+            </div>
+            <div class="filter-group">
+              <label for="filter-sort"    class="filter-label">Sort</label>
+              <select class="filter-select" id="filter-sort">
+                <option value="relevance">Relevance</option>
+                <option value="date-desc">Newest</option>
+                <option value="date-asc">Oldest</option>
+                <option value="name-asc">Name A–Z</option>
+                <option value="size-desc">Largest</option>
+              </select>
+            </div>
+          </div>
+          <div class="search-filters__right">
+            <div class="view-toggle" role="group" aria-label="View mode">
+              <button class="view-toggle__btn view-toggle__btn--active" id="view-list-btn" type="button" aria-label="List" aria-pressed="true">
+                <svg aria-hidden="true" viewBox="0 0 24 24" width="15" height="15"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+              </button>
+              <button class="view-toggle__btn" id="view-grid-btn" type="button" aria-label="Grid" aria-pressed="false">
+                <svg aria-hidden="true" viewBox="0 0 24 24" width="15" height="15"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+              </button>
+            </div>
+            <button class="btn btn--ghost btn--small" id="clear-filters-btn" type="button">Clear filters</button>
+          </div>
+        </div>
+
+        <!-- Results layout -->
+        <div class="results-layout" id="results-layout">
+          <div class="results-panel" id="results-panel" role="region" aria-label="Search results">
+            <div class="state-loading" id="results-loading" role="status" hidden>
+              <div class="spinner"><div class="spinner__ring"></div></div>
+              <p class="state-loading__text">Searching…</p>
+            </div>
+            <div class="state-empty" id="results-empty" hidden>
+              <div class="state-empty__icon"><svg viewBox="0 0 24 24" width="46" height="46"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+              <h2 class="state-empty__title">No results found</h2>
+              <p class="state-empty__body" id="results-empty-message">Try different keywords or connect more accounts.</p>
+              <button class="btn btn--primary" id="results-empty-cta" type="button">Clear filters</button>
+            </div>
+            <div class="state-error" id="results-error" role="alert" hidden>
+              <div class="state-error__icon"><svg viewBox="0 0 24 24" width="46" height="46"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+              <h2 class="state-error__title">Search failed</h2>
+              <p class="state-error__body" id="results-error-message"></p>
+              <button class="btn btn--primary" id="results-retry-btn" type="button">Retry</button>
+            </div>
+            <!-- Virtual scroll -->
+            <div class="virtual-scroll-container" id="virtual-scroll-container">
+              <div id="vs-spacer-top"></div>
+              <ol class="results-list" id="results-list" role="list" aria-live="polite" aria-atomic="false"></ol>
+              <div id="vs-spacer-bottom"></div>
+            </div>
+            <!-- Pagination -->
+            <nav class="results-pagination" id="results-pagination" aria-label="Pagination" hidden>
+              <button class="btn btn--ghost pagination__btn" id="pagination-prev-btn" type="button" aria-label="Previous" disabled>
+                <svg aria-hidden="true" viewBox="0 0 24 24" width="15" height="15"><polyline points="15 18 9 12 15 6"/></svg> Prev
+              </button>
+              <span class="pagination__info" id="pagination-info" aria-live="polite">Page 1 of 1</span>
+              <button class="btn btn--ghost pagination__btn" id="pagination-next-btn" type="button" aria-label="Next">
+                Next <svg aria-hidden="true" viewBox="0 0 24 24" width="15" height="15"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+            </nav>
+          </div>
+
+          <!-- Preview panel -->
+          <aside class="preview-panel" id="preview-panel" role="complementary" aria-label="Preview" hidden>
+            <header class="preview-panel__header">
+              <h2 class="preview-panel__title" id="preview-title">Preview</h2>
+              <div class="preview-panel__actions">
+                <button class="btn-icon" id="preview-open-btn"     type="button" aria-label="Open original">
+                  <svg aria-hidden="true" viewBox="0 0 24 24" width="15" height="15"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                </button>
+                <button class="btn-icon" id="preview-download-btn" type="button" aria-label="Download" hidden>
+                  <svg aria-hidden="true" viewBox="0 0 24 24" width="15" height="15"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                </button>
+                <button class="btn-icon" id="preview-copy-link-btn" type="button" aria-label="Copy link" hidden>
+                  <svg aria-hidden="true" viewBox="0 0 24 24" width="15" height="15"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+                </button>
+                <button class="btn-icon" id="preview-star-btn"     type="button" aria-label="Star" aria-pressed="false">
+                  <svg aria-hidden="true" viewBox="0 0 24 24" width="15" height="15"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                </button>
+                <button class="btn-icon" id="preview-close-btn"    type="button" aria-label="Close preview">
+                  <svg aria-hidden="true" viewBox="0 0 24 24" width="15" height="15"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+            </header>
+            <!-- Local file actions -->
+            <div class="preview-local-actions" id="preview-local-actions" hidden>
+              <button class="btn btn--ghost btn--small" id="preview-reselect-btn"  type="button">Re-select Folder</button>
+              <button class="btn btn--ghost btn--small" id="preview-copy-path-btn" type="button">Copy Path</button>
+            </div>
+            <div class="preview-panel__body" id="preview-body">
+              <div class="preview-placeholder" id="preview-placeholder">
+                <svg aria-hidden="true" viewBox="0 0 24 24" width="38" height="38"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                <p>Select a result to preview</p>
+              </div>
+            </div>
+            <footer class="preview-panel__meta" id="preview-meta" hidden>
+              <dl class="meta-list" id="preview-meta-list"></dl>
+            </footer>
+          </aside>
+        </div>
+      </section>
+
+      <!-- ════════════════════════════════════════════════════════
+           RECENT VIEW
+      ════════════════════════════════════════════════════════ -->
+      <section class="view" id="view-recent" data-view="recent" hidden>
+        <header class="view-header">
+          <h1 class="view-header__title">Recent</h1>
+          <p class="view-header__subtitle">Files and emails accessed recently.</p>
+        </header>
+        <ol class="results-list" id="recent-list" role="list"></ol>
+        <div class="state-empty" id="recent-empty" hidden>
+          <p class="state-empty__title">Nothing yet</p>
+          <p class="state-empty__body">Items you open will appear here.</p>
+        </div>
+      </section>
+
+      <!-- ════════════════════════════════════════════════════════
+           STARRED VIEW
+      ════════════════════════════════════════════════════════ -->
+      <section class="view" id="view-starred" data-view="starred" hidden>
+        <header class="view-header">
+          <h1 class="view-header__title">Starred</h1>
+          <p class="view-header__subtitle">Items you've starred for quick access.</p>
+        </header>
+        <ol class="results-list" id="starred-list" role="list"></ol>
+        <div class="state-empty" id="starred-empty" hidden>
+          <p class="state-empty__title">No starred items</p>
+          <p class="state-empty__body">Star any result to pin it here.</p>
+        </div>
+      </section>
+
+      <!-- ════════════════════════════════════════════════════════
+           SETTINGS VIEW
+      ════════════════════════════════════════════════════════ -->
+      <section class="view" id="view-settings" data-view="settings" hidden>
+        <header class="view-header">
+          <div class="view-header__text">
+            <h1 class="view-header__title">Settings</h1>
+            <p class="view-header__subtitle">Customise OneSearch to your preferences.</p>
+          </div>
+        </header>
+
+        <div class="settings-layout">
+          <!-- Settings nav -->
+          <nav class="settings-nav" aria-label="Settings sections">
+            <button class="settings-nav__item settings-nav__item--active" data-settings-tab="appearance" type="button">Appearance</button>
+            <button class="settings-nav__item" data-settings-tab="search"     type="button">Search</button>
+            <button class="settings-nav__item" data-settings-tab="performance" type="button">Performance</button>
+            <button class="settings-nav__item" data-settings-tab="privacy"    type="button">Privacy</button>
+            <button class="settings-nav__item" data-settings-tab="data"       type="button">Indexed Data</button>
+            <button class="settings-nav__item" data-settings-tab="about"      type="button">About</button>
+          </nav>
+
+          <!-- Settings panels -->
+          <div class="settings-panels">
+
+            <!-- Appearance -->
+            <div class="settings-panel" id="settings-tab-appearance">
+              <h2 class="settings-panel__title">Appearance</h2>
+              <div class="settings-row">
+                <div class="settings-row__label">
+                  <p class="settings-row__name">Theme</p>
+                  <p class="settings-row__desc">Choose between dark and light mode.</p>
+                </div>
+                <div class="settings-row__control">
+                  <select class="filter-select" id="setting-theme">
+                    <option value="dark">Dark</option>
+                    <option value="light">Light</option>
+                    <option value="system">System</option>
+                  </select>
+                </div>
+              </div>
+              <div class="settings-row">
+                <div class="settings-row__label">
+                  <p class="settings-row__name">Results per page</p>
+                  <p class="settings-row__desc">How many search results to show per page.</p>
+                </div>
+                <div class="settings-row__control">
+                  <select class="filter-select" id="setting-page-size">
+                    <option value="10">10</option>
+                    <option value="20" selected>20</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Search -->
+            <div class="settings-panel" id="settings-tab-search" hidden>
+              <h2 class="settings-panel__title">Search</h2>
+              <div class="settings-row">
+                <div class="settings-row__label">
+                  <p class="settings-row__name">Fuzzy search</p>
+                  <p class="settings-row__desc">Match results even with typos in your query.</p>
+                </div>
+                <div class="settings-row__control">
+                  <label class="toggle"><input type="checkbox" id="setting-fuzzy" checked /><span class="toggle__slider"></span></label>
+                </div>
+              </div>
+              <div class="settings-row">
+                <div class="settings-row__label">
+                  <p class="settings-row__name">Search suggestions</p>
+                  <p class="settings-row__desc">Show live suggestions while typing.</p>
+                </div>
+                <div class="settings-row__control">
+                  <label class="toggle"><input type="checkbox" id="setting-suggestions" checked /><span class="toggle__slider"></span></label>
+                </div>
+              </div>
+              <div class="settings-row">
+                <div class="settings-row__label">
+                  <p class="settings-row__name">Search history</p>
+                  <p class="settings-row__desc">Remember recent searches.</p>
+                </div>
+                <div class="settings-row__control">
+                  <label class="toggle"><input type="checkbox" id="setting-history" checked /><span class="toggle__slider"></span></label>
+                </div>
+              </div>
+              <div class="settings-row">
+                <div class="settings-row__label">
+                  <p class="settings-row__name">Max Gmail messages</p>
+                  <p class="settings-row__desc">Limit how many emails are indexed per account.</p>
+                </div>
+                <div class="settings-row__control">
+                  <select class="filter-select" id="setting-gmail-max">
+                    <option value="500">500</option>
+                    <option value="1000">1,000</option>
+                    <option value="2000" selected>2,000</option>
+                    <option value="5000">5,000</option>
+                  </select>
+                </div>
+              </div>
+              <div class="settings-row">
+                <div class="settings-row__label">
+                  <p class="settings-row__name">Max Photos</p>
+                  <p class="settings-row__desc">Limit how many photos are indexed per account.</p>
+                </div>
+                <div class="settings-row__control">
+                  <select class="filter-select" id="setting-photos-max">
+                    <option value="1000">1,000</option>
+                    <option value="5000" selected>5,000</option>
+                    <option value="10000">10,000</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Performance -->
+            <div class="settings-panel" id="settings-tab-performance" hidden>
+              <h2 class="settings-panel__title">Performance</h2>
+              <div class="settings-row">
+                <div class="settings-row__label">
+                  <p class="settings-row__name">Background indexing</p>
+                  <p class="settings-row__desc">Index new files in the background without blocking search.</p>
+                </div>
+                <div class="settings-row__control">
+                  <label class="toggle"><input type="checkbox" id="setting-bg-index" checked /><span class="toggle__slider"></span></label>
+                </div>
+              </div>
+              <div class="settings-row">
+                <div class="settings-row__label">
+                  <p class="settings-row__name">Virtual scrolling</p>
+                  <p class="settings-row__desc">Efficiently render large result lists. Always on for best performance.</p>
+                </div>
+                <div class="settings-row__control">
+                  <span class="settings-row__badge">Always On</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Privacy -->
+            <div class="settings-panel" id="settings-tab-privacy" hidden>
+              <h2 class="settings-panel__title">Privacy</h2>
+              <div class="settings-privacy-notice">
+                <svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                <div>
+                  <p><strong>OneSearch is 100% private.</strong></p>
+                  <p>No servers. No analytics. No tracking. No accounts. Your files never leave your browser. OAuth tokens live only in memory — cleared when you close the tab. Indexed metadata is stored only in your browser's IndexedDB.</p>
+                </div>
+              </div>
+              <div class="settings-row settings-row--danger">
+                <div class="settings-row__label">
+                  <p class="settings-row__name">Clear search history</p>
+                  <p class="settings-row__desc">Remove all recent searches and viewed items.</p>
+                </div>
+                <div class="settings-row__control">
+                  <button class="btn btn--secondary btn--small" id="setting-clear-history-btn" type="button">Clear History</button>
+                </div>
+              </div>
+              <div class="settings-row settings-row--danger">
+                <div class="settings-row__label">
+                  <p class="settings-row__name">Clear all indexed data</p>
+                  <p class="settings-row__desc">Remove all indexed metadata from IndexedDB. Your actual files are not deleted.</p>
+                </div>
+                <div class="settings-row__control">
+                  <button class="btn btn--secondary btn--small" id="setting-clear-index-btn" type="button">Clear Index</button>
+                </div>
+              </div>
+              <div class="settings-row settings-row--danger">
+                <div class="settings-row__label">
+                  <p class="settings-row__name">Disconnect all accounts</p>
+                  <p class="settings-row__desc">Remove all Google accounts and their indexed data.</p>
+                </div>
+                <div class="settings-row__control">
+                  <button class="btn btn--danger btn--small" id="setting-disconnect-all-btn" type="button">Disconnect All</button>
+                </div>
+              </div>
+              <div class="settings-row settings-row--danger">
+                <div class="settings-row__label">
+                  <p class="settings-row__name">Reset everything</p>
+                  <p class="settings-row__desc">Delete all data — index, accounts, history, preferences. Start fresh.</p>
+                </div>
+                <div class="settings-row__control">
+                  <button class="btn btn--danger btn--small" id="setting-reset-btn" type="button">Reset Everything</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Indexed Data -->
+            <div class="settings-panel" id="settings-tab-data" hidden>
+              <h2 class="settings-panel__title">Indexed Data</h2>
+              <div class="settings-data-grid" id="settings-data-grid">
+                <!-- Populated by app.js -->
+              </div>
+            </div>
+
+            <!-- About -->
+            <div class="settings-panel" id="settings-tab-about" hidden>
+              <h2 class="settings-panel__title">About OneSearch</h2>
+              <div class="settings-about">
+                <div class="settings-about__logo">
+                  <span class="logo-mark" style="font-size:2.5rem">◎</span>
+                  <div>
+                    <p class="settings-about__name">OneSearch</p>
+                    <p class="settings-about__version" id="settings-version">Version 3.0.0</p>
+                  </div>
+                </div>
+                <p class="settings-about__desc">Privacy-first personal universal search engine. Runs entirely in your browser. No backend. No tracking. No servers.</p>
+                <div class="settings-about__links">
+                  <a href="https://github.com" target="_blank" rel="noopener noreferrer" class="btn btn--ghost btn--small">GitHub</a>
+                  <a href="#" class="btn btn--ghost btn--small" id="about-privacy-btn">Privacy Policy</a>
+                  <a href="#" class="btn btn--ghost btn--small" id="about-licenses-btn">Licenses</a>
+                </div>
+                <p class="settings-about__tech">Built with vanilla JavaScript · No frameworks · IndexedDB · Web Workers · File System Access API · Google Identity Services</p>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="footer" id="main-footer" role="contentinfo">
+    <div class="footer__inner">
+      <p class="footer__brand"><span class="footer__logo-mark" aria-hidden="true">◎</span><span>OneSearch</span></p>
+      <p class="footer__privacy">
+        <svg aria-hidden="true" viewBox="0 0 24 24" width="12" height="12"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Everything stays in your browser. No servers. No tracking.
+      </p>
+      <p class="footer__copy"><small>&copy; <span id="footer-year"></span> OneSearch.</small></p>
+    </div>
+  </footer>
+
+</div>
+
+<script src="app.js" defer></script>
+</body>
+</html>
